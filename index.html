@@ -45,9 +45,9 @@
   .ratebtn:active{opacity:.6}
 
   /* add */
-  .addbar{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0 26px}
+  .addbar{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0 26px}
   .add{border:1px solid var(--ink);border-radius:var(--radius);background:var(--bg);color:var(--ink);
-    padding:20px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px;
+    padding:18px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
     font-family:inherit;font-size:13px;font-weight:700;transition:transform .08s}
   .add:active{transform:translateY(1px)}
   .add.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
@@ -70,14 +70,14 @@
   .cardface{position:relative;z-index:1;background:var(--bg);display:flex;align-items:flex-start;gap:13px;
     padding:14px 16px;touch-action:pan-y;transition:transform .22s cubic-bezier(.2,.8,.2,1);will-change:transform}
   .card.open .cardface{transform:translateX(-120px)}
-  .ci{width:22px;flex-shrink:0;color:var(--ink)}
-  .cbody{flex:1;min-width:0}
-  .name{font-size:15px;font-weight:800;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .sub{font-size:12px;color:var(--sub);margin-top:3px;display:flex;flex-wrap:wrap;gap:1px 10px}
-  .sub b{color:var(--ink);font-weight:700}
-  .price{flex-shrink:0;display:flex;align-items:baseline;gap:3px}
+  .ci{width:22px;flex-shrink:0;color:var(--ink);align-self:center}
+  .name{font-size:16px;font-weight:800;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:1;min-width:0;align-self:center}
+  .cright{margin-left:auto;flex-shrink:0;text-align:right;min-width:0}
+  .price{display:flex;align-items:baseline;justify-content:flex-end;gap:3px}
   .price .p{font-size:16px;font-weight:800}
   .price .cy{font-size:11px;color:var(--sub)}
+  .sub{font-size:12px;color:var(--sub);margin-top:3px;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:1px 10px}
+  .sub b{color:var(--ink);font-weight:700}
   .swipe-hint{text-align:center;font-size:11px;color:var(--sub);margin:2px 0 14px}
 
   .empty{text-align:center;padding:56px 20px;color:var(--sub)}
@@ -171,12 +171,16 @@
   </div>
 
   <div class="addbar">
-    <button class="add primary" onclick="pickReceipt()">
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.2"/></svg>
-      영수증
+    <button class="add primary" onclick="pasteText()">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6 8.5-6"/></svg>
+      문자
+    </button>
+    <button class="add" onclick="pickReceipt()">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.2"/></svg>
+      사진
     </button>
     <button class="add" onclick="openForm()">
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 5v14M5 12h14"/></svg>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 5v14M5 12h14"/></svg>
       직접
     </button>
   </div>
@@ -321,8 +325,11 @@ function render(){
       </div>
       <div class="cardface">
         <span class="ci">${svgIcon(s.category,22)}</span>
-        <div class="cbody"><div class="name">${esc(s.name)}</div><div class="sub">${sub.map(x=>`<span>${x}</span>`).join('')}</div></div>
-        <div class="price"><div class="p num">${fmt(s.amount,s.currency)}</div><div class="cy">/${s.cycle==='yearly'?'년':'월'}</div></div>
+        <div class="name">${esc(s.name)}</div>
+        <div class="cright">
+          <div class="price"><span class="p num">${fmt(s.amount,s.currency)}</span><span class="cy">/${s.cycle==='yearly'?'년':'월'}</span></div>
+          <div class="sub">${sub.map(x=>`<span>${x}</span>`).join('')}</div>
+        </div>
       </div>
     </div>`;
   }).join('');
@@ -353,6 +360,34 @@ function saveForm(){
 }
 function del(id){const s=subs.find(x=>x.id===id);if(confirm(`"${s.name}" 삭제할까요?`)){subs=subs.filter(x=>x.id!==id);save();render();}}
 
+function fillForm(p){
+  if(p.name)fName.value=p.name;
+  if(p.amount)fAmount.value=p.amount;
+  if(p.currency)fCur.value=p.currency;
+  if(p.startDate)fStart.value=p.startDate;
+  if(p.nextPayment)fNext.value=p.nextPayment;
+  if(p.category){formCat=p.category;renderCats();}
+  if(p.cycle){formCycle=p.cycle;setCycle(formCycle);}
+}
+async function pasteText(){
+  let txt='';
+  try{ if(navigator.clipboard&&navigator.clipboard.readText) txt=await navigator.clipboard.readText(); }catch(e){}
+  const v=prompt('결제 문자나 영수증 내용을 붙여넣으세요.\n\n예) 삼성2408해외승인\nUSD 53.17\n08/27 PAYPAL*CAPCUT', txt||'');
+  if(v===null)return;
+  const p=parseReceiptText(v);
+  openForm();setTitle('붙여넣기');
+  const status=document.getElementById('aiStatus');
+  status.className='ai on';
+  if(p){
+    fillForm(p);
+    let miss=[];
+    if(!p.name)miss.push('이름');
+    if(!p.amount)miss.push('금액');
+    status.innerHTML=miss.length?`<b>일부 인식 ✓</b><br>${miss.join('·')}은 직접 입력해주세요.`:'<b>인식 완료 ✓</b><br>확인 후 저장하세요.';
+  }else{
+    status.innerHTML='<b>인식 실패</b><br>아래에 직접 입력하세요.';
+  }
+}
 function pickReceipt(){document.getElementById('receiptInput').click();}
 async function handleReceipt(e){
   const file=e.target.files[0];e.target.value='';if(!file)return;
@@ -365,18 +400,20 @@ async function runReceiptAI(b64,mime,previewSrc){
   const status=document.getElementById('aiStatus');status.className='ai on';status.innerHTML='<span class="spin"></span>읽는 중…';
   try{
     const p=await readReceipt(b64,mime);
-    if(p.name)fName.value=p.name;if(p.amount)fAmount.value=p.amount;if(p.currency)fCur.value=p.currency;if(p.startDate)fStart.value=p.startDate;if(p.nextPayment)fNext.value=p.nextPayment;
-    if(p.category){formCat=p.category;renderCats();}if(p.cycle){formCycle=p.cycle;setCycle(formCycle);}
+    fillForm(p);
     let m='<b>완료 ✓</b> 확인 후 저장';
     if(p.note)m+=`<br>· ${esc(p.note)}`;
     if(!p.startDate)m+='<br>· 시작일은 직접 입력 (기간 계산용)';
     status.className='ai on';status.innerHTML=m;
   }catch(err){
     status.className='ai on err';
-    if(err.message==='NOKEY')status.innerHTML='<b>API 키 필요</b><br>우측 상단 ⚙︎ 에서 키를 넣어주세요.';
-    else if(err.message==='BADKEY')status.innerHTML='<b>API 키 오류</b><br>키가 유효하지 않아요. ⚙︎ 에서 다시 넣어주세요.';
-    else if(err.message==='QUOTA')status.innerHTML='<b>사용량 초과</b><br>오늘 무료 한도를 다 썼어요. 내일 다시 되거나, 아래에 직접 입력하세요.';
-    else status.innerHTML='<b>인식 실패</b><br>아래에 직접 입력하세요.<br><span style="opacity:.7;font-size:11px;word-break:break-all">'+esc(err.detail||err.message||'')+'</span>';
+    const M={NOKEY:'<b>API 키 필요</b><br>우측 상단 ⚙︎ 에서 키를 넣어주세요.',
+      BADKEY:'<b>API 키 오류</b><br>⚙︎ 에서 다시 넣어주세요.',
+      QUOTA:'<b>오늘 사용량 초과</b><br>내일 다시 되거나, 문자 붙여넣기를 쓰세요.',
+      SLOW:'<b>응답이 느려요</b><br>문자 붙여넣기가 훨씬 빨라요.',
+      NET:'<b>네트워크 오류</b><br>연결을 확인해주세요.'};
+    status.innerHTML=(M[err.message]||'<b>인식 실패</b>')+'<br>아래에 직접 입력하세요.'+
+      (err.detail?`<br><span style="opacity:.7;font-size:11px">${esc(err.detail)}</span>`:'');
   }
 }
 
@@ -443,8 +480,8 @@ function applyCrop(){
   let cv=document.createElement('canvas');
   cv.width=Math.round(crop.w*sx);cv.height=Math.round(crop.h*sx);
   cv.getContext('2d').drawImage(img,crop.x*sx,crop.y*sx,crop.w*sx,crop.h*sx,0,0,cv.width,cv.height);
-  cv=shrink(cv,1600);
-  const url=cv.toDataURL('image/jpeg',0.85);
+  cv=shrink(cv,1100);
+  const url=cv.toDataURL("image/jpeg",0.8);
   closeCrop();runReceiptAI(url.split(',')[1],'image/jpeg',url);
 }
 function useFull(){
@@ -452,12 +489,80 @@ function useFull(){
   let cv=document.createElement('canvas');
   cv.width=img.naturalWidth;cv.height=img.naturalHeight;
   cv.getContext('2d').drawImage(img,0,0);
-  cv=shrink(cv,1600);
-  const url=cv.toDataURL('image/jpeg',0.85);
+  cv=shrink(cv,1100);
+  const url=cv.toDataURL("image/jpeg",0.8);
   closeCrop();runReceiptAI(url.split(',')[1],'image/jpeg',url);
 }
 function toBase64(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=()=>rej(new Error('e'));r.readAsDataURL(file);});}
-const GEMINI_MODELS=['gemini-3.6-flash','gemini-flash-latest','gemini-3.7-flash','gemini-3.5-flash-lite','gemini-3.1-flash-lite'];
+const RECEIPT_PROMPT=`이미지는 구독 결제 영수증, 결제 내역, 또는 카드 결제 문자 캡처야. 읽어서 JSON 하나만 출력해.
+{"name":"서비스명","amount":숫자,"currency":"KRW"|"USD","cycle":"monthly"|"yearly","startDate":"YYYY-MM-DD"|null,"nextPayment":"YYYY-MM-DD"|null,"category":"ott"|"design"|"ai"|"cloud"|"work"|"news"|"game"|"etc","note":"짧은 한글 메모"}
+규칙: 결제대행사 표기(PAYPAL*, GOOGLE*, PADDLE*, APPLE.COM/BILL)는 떼고 실제 서비스명만. USD 표기면 currency는 USD. 주기 미상이면 monthly. amount는 숫자만.`;
+
+/* ---------- 텍스트 파서 (AI 불필요) ---------- */
+const BRANDS=[
+  [/capcut/i,'CapCut','design'],[/adobe|creative ?cloud/i,'Adobe CC','design'],[/figma/i,'Figma','design'],
+  [/canva/i,'Canva','design'],[/netflix|넷플릭스/i,'Netflix','ott'],[/youtube|유튜브/i,'YouTube Premium','ott'],
+  [/spotify|스포티파이/i,'Spotify','ott'],[/disney/i,'Disney+','ott'],[/tving|티빙/i,'TVING','ott'],
+  [/wavve|웨이브/i,'Wavve','ott'],[/watcha|왓챠/i,'왓챠','ott'],[/coupang|쿠팡/i,'쿠팡플레이','ott'],
+  [/melon|멜론/i,'멜론','ott'],[/openai|chatgpt/i,'ChatGPT','ai'],[/anthropic|claude/i,'Claude','ai'],
+  [/midjourney/i,'Midjourney','ai'],[/runway/i,'Runway','ai'],[/elevenlabs/i,'ElevenLabs','ai'],
+  [/higgsfield/i,'Higgsfield','ai'],[/suno/i,'Suno','ai'],[/notion|노션/i,'Notion','work'],
+  [/slack/i,'Slack','work'],[/dropbox/i,'Dropbox','cloud'],[/icloud|apple\.com\/bill/i,'iCloud','cloud'],
+  [/google ?one|구글원/i,'Google One','cloud'],[/microsoft|office ?365|m365/i,'Microsoft 365','work'],
+  [/github/i,'GitHub','work'],[/steam/i,'Steam','game'],[/nintendo/i,'Nintendo','game'],
+  [/playstation|psn/i,'PlayStation Plus','game'],[/xbox/i,'Xbox','game'],[/millie|밀리의서재/i,'밀리의 서재','news'],
+];
+function parseReceiptText(raw){
+  const t=(raw||'').replace(/\u00a0/g,' ').trim();
+  if(!t)return null;
+  const out={name:null,amount:null,currency:'KRW',cycle:'monthly',startDate:null,nextPayment:null,category:'etc',note:''};
+
+  // 금액 + 통화
+  let m=t.match(/(?:USD|US\$|\$)\s*([\d,]+(?:\.\d+)?)/i);
+  if(m){out.amount=parseFloat(m[1].replace(/,/g,''));out.currency='USD';}
+  else{
+    m=t.match(/([\d,]+)\s*원/)||t.match(/(?:KRW|₩)\s*([\d,]+)/i);
+    if(m){out.amount=parseFloat(m[1].replace(/,/g,''));out.currency='KRW';}
+    else{
+      const nums=t.match(/[\d,]{3,}/g);
+      if(nums){const big=nums.map(n=>parseFloat(n.replace(/,/g,''))).filter(n=>n>=100);if(big.length)out.amount=big[0];}
+    }
+  }
+
+  // 주기
+  if(/연간|1\s*year|annual|yearly|\/\s*년|매년/i.test(t))out.cycle='yearly';
+
+  // 날짜
+  let d=t.match(/(20\d{2})[.\-/년]\s*(\d{1,2})[.\-/월]\s*(\d{1,2})/);
+  if(d)out.nextPayment=`${d[1]}-${String(d[2]).padStart(2,'0')}-${String(d[3]).padStart(2,'0')}`;
+  else{
+    // MM/DD 형태만 인정 (금액 소수점 53.17 오인 방지: 슬래시 우선, 점은 월/일 범위 검사)
+    d=t.match(/(?:^|[^\d.])(\d{1,2})\/(\d{1,2})(?![\d.])/);
+    if(!d){
+      const c=t.match(/(?:^|[^\d.])(\d{1,2})\.(\d{1,2})(?![\d.])/);
+      if(c&&+c[1]>=1&&+c[1]<=12&&+c[2]>=1&&+c[2]<=31)d=c;
+    }
+    if(d&&+d[1]>=1&&+d[1]<=12&&+d[2]>=1&&+d[2]<=31){
+      const y=new Date().getFullYear();
+      out.nextPayment=`${y}-${String(d[1]).padStart(2,'0')}-${String(d[2]).padStart(2,'0')}`;
+    }
+  }
+
+  // 서비스명 — 브랜드 사전 우선
+  for(const [re,name,cat] of BRANDS){
+    if(re.test(t)){out.name=name;out.category=cat;break;}
+  }
+  // 사전에 없으면 가맹점 표기에서 추출
+  if(!out.name){
+    let g=t.match(/(?:PAYPAL|GOOGLE|PADDLE|STRIPE|FASTSPRING|APPLE)\s*[*\/]\s*([A-Za-z0-9 .\-]{2,30})/i);
+    if(!g)g=t.match(/\b([A-Za-z][A-Za-z0-9 .\-]{2,28})\b(?=\s*$)/m);
+    if(g)out.name=g[1].trim().replace(/\s{2,}/g,' ');
+  }
+  if(!out.name&&out.amount===null)return null;
+  return out;
+}
+
+const GEMINI_MODEL='gemini-3.6-flash';
 let apiKey='';
 async function loadKey(){try{const r=await STORE.get('geminiKey');if(r&&r.value)apiKey=r.value;}catch(e){}}
 async function setKey(){
@@ -469,56 +574,32 @@ async function setKey(){
 }
 async function readReceipt(b64,mime){
   if(!apiKey){const ok=await setKey();if(!ok)throw new Error('NOKEY');}
-  const prompt=`이미지는 구독 결제 영수증, 결제 내역, 또는 카드 결제 문자 캡처야. 읽어서 JSON 하나만 출력해.
-{"name":"서비스명","amount":숫자,"currency":"KRW"|"USD","cycle":"monthly"|"yearly","startDate":"YYYY-MM-DD"|null,"nextPayment":"YYYY-MM-DD"|null,"category":"ott"|"design"|"ai"|"cloud"|"work"|"news"|"game"|"etc","note":"짧은 한글 메모"}
-
-규칙:
-- 카드 결제 문자면 가맹점명에서 서비스명을 뽑아. 결제대행사 표기(PAYPAL*, GOOGLE*, PADDLE*, STRIPE*, APPLE.COM/BILL 등)는 떼고 실제 서비스명만. 예: "PAYPAL*CAPCUT" → "CapCut", "GOOGLE*YouTubePremium" → "YouTube Premium"
-- USD/달러 표기면 currency는 "USD", 원/₩이면 "KRW"
-- 날짜가 MM/DD 형식이면 올해로 간주해 YYYY-MM-DD로. 연도를 모르면 null
-- 주기가 명시 안 되면 "monthly"
-- 카테고리 예시: CapCut·Adobe→design, Netflix·YouTube→ott, ChatGPT·Claude→ai, iCloud·Dropbox→cloud, Notion·Slack→work
-- 못 읽은 항목은 null. amount는 반드시 숫자만(콤마·기호 제외)`;
   const body=JSON.stringify({
-    contents:[{parts:[{inline_data:{mime_type:mime,data:b64}},{text:prompt}]}],
-    generationConfig:{temperature:0,response_mime_type:'application/json'}
+    contents:[{parts:[{inline_data:{mime_type:mime,data:b64}},{text:RECEIPT_PROMPT}]}],
+    generationConfig:{response_mime_type:'application/json'}
   });
-  const errors=[];
-  for(const model of GEMINI_MODELS){
-    for(let attempt=0;attempt<2;attempt++){
-      try{
-        const ctl=new AbortController();
-        const timer=setTimeout(()=>ctl.abort(),60000);
-        const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-          {method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':apiKey},body,signal:ctl.signal});
-        clearTimeout(timer);
-        if(!r.ok){
-          let msg='';
-          try{const j=await r.json();msg=j?.error?.message||'';}catch(_){msg=await r.text().catch(()=>'');}
-          if(r.status===400&&/API key not valid|API_KEY_INVALID/i.test(msg))throw new Error('BADKEY');
-          if(r.status===403)throw new Error('BADKEY');
-          if(r.status===429)throw new Error('QUOTA');
-          if((r.status===503||r.status===500)&&attempt===0){await new Promise(z=>setTimeout(z,1500));continue;}
-          errors.push(`${model}: ${r.status} ${msg.slice(0,70)}`);
-          break;
-        }
-        const data=await r.json();
-        const cand=data?.candidates?.[0];
-        if(!cand){errors.push(`${model}: 응답 비어있음`);break;}
-        let text=(cand.content?.parts||[]).map(p=>p.text||'').join('').replace(/```json|```/g,'').trim();
-        if(!text){errors.push(`${model}: 텍스트 없음 (${cand.finishReason||'?'})`);break;}
-        const a=text.indexOf('{'),b=text.lastIndexOf('}');
-        if(a<0||b<0){errors.push(`${model}: JSON 아님 → ${text.slice(0,50)}`);break;}
-        return JSON.parse(text.slice(a,b+1));
-      }catch(e){
-        if(e.message==='BADKEY'||e.message==='QUOTA')throw e;
-        if(e.name==='AbortError'&&attempt===0)continue;
-        errors.push(`${model}: ${e.name==='AbortError'?'시간초과':e.message}`);
-        break;
-      }
-    }
+  const ctl=new AbortController();
+  const timer=setTimeout(()=>ctl.abort(),15000);
+  let r;
+  try{
+    r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+      {method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':apiKey},body,signal:ctl.signal});
+  }catch(e){
+    clearTimeout(timer);
+    throw new Error(e.name==='AbortError'?'SLOW':'NET');
   }
-  const err=new Error('FAIL');err.detail=errors.join(' / ');throw err;
+  clearTimeout(timer);
+  if(!r.ok){
+    let msg='';try{const j=await r.json();msg=j?.error?.message||'';}catch(_){}
+    if(r.status===403||/API key not valid|API_KEY_INVALID/i.test(msg))throw new Error('BADKEY');
+    if(r.status===429)throw new Error('QUOTA');
+    const e=new Error('FAIL');e.detail=`${r.status} ${msg.slice(0,70)}`;throw e;
+  }
+  const data=await r.json();
+  let text=(data?.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('').replace(/```json|```/g,'').trim();
+  const a=text.indexOf('{'),b=text.lastIndexOf('}');
+  if(a<0||b<0){const e=new Error('FAIL');e.detail='JSON 아님';throw e;}
+  return JSON.parse(text.slice(a,b+1));
 }
 
 document.getElementById('overlay').addEventListener('click',e=>{if(e.target.id==='overlay')closeForm();});

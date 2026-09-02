@@ -12,7 +12,7 @@
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{background:var(--bg);color:var(--ink);
     font-family:'Pretendard','Apple SD Gothic Neo',system-ui,sans-serif;
-    -webkit-font-smoothing:antialiased;line-height:1.5}
+    -webkit-font-smoothing:antialiased;line-height:1.5;touch-action:pan-y;overflow-x:hidden}
   body{padding:26px 18px 90px}
   .wrap{max-width:640px;margin:0 auto}
   svg{display:block}
@@ -24,6 +24,10 @@
   .dot{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--sub)}
   .dot i{width:6px;height:6px;border-radius:50%;background:var(--line);display:block;transition:background .2s}
   .dot.on i{background:var(--ink)}
+  .hdr-right{display:flex;align-items:center;gap:10px}
+  .gear{width:30px;height:30px;border:1px solid var(--line);border-radius:8px;background:var(--bg);
+    color:var(--sub);display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit}
+  .gear:active{transform:translateY(1px)}
 
   /* hero */
   .hero{border:1px solid var(--line);border-radius:var(--radius);padding:24px 22px 22px;margin-bottom:16px}
@@ -142,9 +146,12 @@
   <header>
     <div class="mark">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2Z"/><path d="M9 8h6M9 12h6"/></svg>
-      구독
+      나의구독쓰
     </div>
-    <div class="dot" id="saveDot"><i></i><span id="saveTxt">저장됨</span></div>
+    <div class="hdr-right">
+      <div class="dot" id="saveDot"><i></i><span id="saveTxt">저장됨</span></div>
+      <button class="gear" onclick="setKey()" title="AI 키 설정"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></button>
+    </div>
   </header>
 
   <div class="hero">
@@ -239,6 +246,13 @@
 </div>
 
 <script>
+/* storage: use Claude artifact storage if present, else localStorage */
+const STORE=(window.storage&&typeof window.storage.get==='function')?window.storage:{
+  async get(k){const v=localStorage.getItem(k);if(v===null)throw new Error('missing');return{key:k,value:v};},
+  async set(k,v){localStorage.setItem(k,v);return{key:k,value:v};},
+  async delete(k){localStorage.removeItem(k);return{key:k,deleted:true};}
+};
+
 const ICONS={
   ott:'<path d="M4 5h16v12H4z"/><path d="M10 8.5v5l4-2.5z"/><path d="M8 20h8"/>',
   design:'<path d="M12 3l3 6-3 12-3-12z"/><path d="M9 9h6"/>',
@@ -246,7 +260,7 @@ const ICONS={
   cloud:'<path d="M7 18a4 4 0 0 1 0-8 5 5 0 0 1 9.6-1A3.5 3.5 0 0 1 17 18z"/>',
   work:'<rect x="3" y="7" width="18" height="12" rx="2"/><path d="M9 7V5h6v2"/>',
   news:'<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/>',
-  game:'<rect x="3" y="8" width="18" height="9" rx="4"/><path d="M8 12.5h2M9 11.5v2"/><circle cx="15.5" cy="11.5" r=".9"/><circle cx="17.5" cy="13.5" r=".9"/>',
+  game:'<rect x="4" y="7" width="16" height="10" rx="2"/><circle cx="8.5" cy="12" r="1.2"/><path d="M15.5 10v4"/><path d="M13.5 12h4"/>',
   etc:'<circle cx="6" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18" cy="12" r="1.4"/>'
 };
 const CATS=[
@@ -259,13 +273,13 @@ const catLabel=v=>(CATS.find(c=>c.v===v)||CATS[7]).l;
 let subs=[], editId=null, formCat='etc', formCycle='monthly', rate=1400, openCard=null;
 
 async function load(){
-  try{const r=await window.storage.get('subscriptions');if(r&&r.value)subs=JSON.parse(r.value);}catch(e){subs=[];}
+  try{const r=await STORE.get('subscriptions');if(r&&r.value)subs=JSON.parse(r.value);}catch(e){subs=[];}
   subs.forEach(s=>{s.amount=Number(s.amount)||0;});
-  try{const rr=await window.storage.get('usdRate');if(rr&&rr.value)rate=parseFloat(rr.value)||rate;}catch(e){}
+  try{const rr=await STORE.get('usdRate');if(rr&&rr.value)rate=parseFloat(rr.value)||rate;}catch(e){}
   render();
 }
-async function save(){try{await window.storage.set('subscriptions',JSON.stringify(subs));flashSaved();}catch(e){document.getElementById('saveTxt').textContent='임시';}}
-async function saveRate(){try{await window.storage.set('usdRate',String(rate));flashSaved();}catch(e){}}
+async function save(){try{await STORE.set('subscriptions',JSON.stringify(subs));flashSaved();}catch(e){document.getElementById('saveTxt').textContent='임시';}}
+async function saveRate(){try{await STORE.set('usdRate',String(rate));flashSaved();}catch(e){}}
 function editRate(){const v=prompt('환율 설정 · $1 = ₩ ?',rate);if(v===null)return;const n=parseFloat(String(v).replace(/[^0-9.]/g,''));if(n>0){rate=Math.round(n);saveRate();render();}}
 const toKRW=s=>monthlyEq(s)*(s.currency==='USD'?rate:1);
 let st;
@@ -356,7 +370,12 @@ async function runReceiptAI(b64,mime,previewSrc){
     if(p.note)m+=`<br>· ${esc(p.note)}`;
     if(!p.startDate)m+='<br>· 시작일은 직접 입력 (기간 계산용)';
     status.className='ai on';status.innerHTML=m;
-  }catch(err){status.className='ai on err';status.innerHTML='<b>인식 실패</b><br>아래에 직접 입력하세요';}
+  }catch(err){
+    status.className='ai on err';
+    if(err.message==='NOKEY')status.innerHTML='<b>API 키 필요</b><br>헤더의 ⚙︎ 를 눌러 키를 넣으면 자동 인식돼요.<br>지금은 아래에 직접 입력하세요.';
+    else if(err.message==='BADKEY')status.innerHTML='<b>API 키 오류</b><br>키가 잘못됐어요. ⚙︎ 에서 다시 넣어주세요.';
+    else status.innerHTML='<b>인식 실패</b><br>아래에 직접 입력하세요.';
+  }
 }
 
 /* ---------- cropper ---------- */
@@ -425,12 +444,42 @@ function useFull(){
   closeCrop();runReceiptAI(url.split(',')[1],'image/jpeg',url);
 }
 function toBase64(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=()=>rej(new Error('e'));r.readAsDataURL(file);});}
+const GEMINI_MODELS=['gemini-3.6-flash','gemini-3-flash','gemini-2.5-flash','gemini-2.0-flash'];
+let apiKey='';
+async function loadKey(){try{const r=await STORE.get('geminiKey');if(r&&r.value)apiKey=r.value;}catch(e){}}
+async function setKey(){
+  const v=prompt('Gemini API 키를 붙여넣으세요.\n\naistudio.google.com/apikey 에서 무료 발급',apiKey||'');
+  if(v===null)return false;
+  apiKey=v.trim();
+  try{await STORE.set('geminiKey',apiKey);}catch(e){}
+  return !!apiKey;
+}
 async function readReceipt(b64,mime){
+  if(!apiKey){const ok=await setKey();if(!ok)throw new Error('NOKEY');}
   const prompt=`이 이미지는 구독 결제 영수증/내역 캡처입니다. 아래 JSON만 출력. 마크다운·백틱·설명 금지.
 {"name":서비스명,"amount":숫자만,"currency":"KRW"|"USD","cycle":"monthly"|"yearly"(월간=monthly,연간=yearly,애매하면 monthly),"startDate":"YYYY-MM-DD"|null(가입일 보일때만),"nextPayment":"YYYY-MM-DD"|null,"category":"ott"|"design"|"ai"|"cloud"|"work"|"news"|"game"|"etc","note":짧은 한글 참고 or ""}`;
-  const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:mime,data:b64}},{type:'text',text:prompt}]}]})});
-  const data=await r.json();let text=(data.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('').replace(/```json|```/g,'').trim();
-  const a=text.indexOf('{'),b=text.lastIndexOf('}');if(a>=0&&b>=0)text=text.slice(a,b+1);return JSON.parse(text);
+  const body=JSON.stringify({contents:[{parts:[{inline_data:{mime_type:mime,data:b64}},{text:prompt}]}]});
+  let lastErr=null;
+  for(const model of GEMINI_MODELS){
+    try{
+      const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+        {method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':apiKey},body});
+      if(!r.ok){
+        const errTxt=await r.text();
+        if(r.status===400&&/API key|API_KEY/i.test(errTxt))throw new Error('BADKEY');
+        if(r.status===403)throw new Error('BADKEY');
+        lastErr=new Error('model '+model+' -> '+r.status);continue;
+      }
+      const data=await r.json();
+      let text=(data?.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('').replace(/```json|```/g,'').trim();
+      const a=text.indexOf('{'),b=text.lastIndexOf('}');if(a>=0&&b>=0)text=text.slice(a,b+1);
+      return JSON.parse(text);
+    }catch(e){
+      if(e.message==='BADKEY')throw e;
+      lastErr=e;
+    }
+  }
+  throw lastErr||new Error('FAIL');
 }
 
 document.getElementById('overlay').addEventListener('click',e=>{if(e.target.id==='overlay')closeForm();});
@@ -483,6 +532,7 @@ listEl.addEventListener('click',e=>{
   if(btn.dataset.act==='edit')openForm(id);else del(id);
 });
 
+loadKey();
 load();
 </script>
 </body>

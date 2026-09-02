@@ -67,7 +67,7 @@
   .cardact .ca{width:60px;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit}
   .ca.edit{background:var(--fill);color:var(--ink)}
   .ca.del{background:var(--ink);color:#fff}
-  .cardface{position:relative;z-index:1;background:var(--bg);display:flex;align-items:center;gap:13px;
+  .cardface{position:relative;z-index:1;background:var(--bg);display:flex;align-items:flex-start;gap:13px;
     padding:14px 16px;touch-action:pan-y;transition:transform .22s cubic-bezier(.2,.8,.2,1);will-change:transform}
   .card.open .cardface{transform:translateX(-120px)}
   .ci{width:22px;flex-shrink:0;color:var(--ink)}
@@ -75,9 +75,9 @@
   .name{font-size:15px;font-weight:800;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .sub{font-size:12px;color:var(--sub);margin-top:3px;display:flex;flex-wrap:wrap;gap:1px 10px}
   .sub b{color:var(--ink);font-weight:700}
-  .price{text-align:right;flex-shrink:0}
+  .price{flex-shrink:0;display:flex;align-items:baseline;gap:3px}
   .price .p{font-size:16px;font-weight:800}
-  .price .cy{font-size:11px;color:var(--sub);margin-top:1px}
+  .price .cy{font-size:11px;color:var(--sub)}
   .swipe-hint{text-align:center;font-size:11px;color:var(--sub);margin:2px 0 14px}
 
   .empty{text-align:center;padding:56px 20px;color:var(--sub)}
@@ -85,10 +85,10 @@
   .empty p{font-size:13px}
 
   /* modal */
-  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.34);display:none;align-items:flex-end;justify-content:center;z-index:50}
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.34);display:none;align-items:flex-end;justify-content:center;z-index:50;touch-action:pan-y}
   .overlay.on{display:flex}
   .sheet{background:var(--bg);width:100%;max-width:640px;border-radius:18px 18px 0 0;
-    padding:8px 20px 30px;max-height:92vh;overflow-y:auto;animation:up .2s ease}
+    padding:8px 20px 30px;max-height:92vh;overflow-y:auto;overflow-x:hidden;touch-action:pan-y;animation:up .2s ease}
   @keyframes up{from{transform:translateY(24px)}to{transform:none}}
   @media(min-width:640px){.overlay{align-items:center}.sheet{border-radius:18px}}
   .grab{width:38px;height:4px;background:var(--line);border-radius:4px;margin:8px auto 18px}
@@ -111,9 +111,10 @@
   .seg button{flex:1;font-family:inherit;font-size:14px;font-weight:700;padding:11px;border:1px solid var(--line);
     background:var(--bg);color:var(--sub);border-radius:10px;cursor:pointer}
   .seg button.act{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-  .catgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-  .catgrid button{font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:5px;padding:11px 4px;
-    border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;cursor:pointer;font-size:10px;font-weight:600}
+  .catgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+  .catgrid button{font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:5px;padding:11px 2px;
+    border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;cursor:pointer;font-size:10px;font-weight:600;
+    min-width:0;white-space:nowrap;overflow:hidden}
   .catgrid button svg{color:var(--ink)}
   .catgrid button.act{background:var(--ink);color:var(--bg)}
   .catgrid button.act svg{color:var(--bg)}
@@ -456,7 +457,7 @@ function useFull(){
   closeCrop();runReceiptAI(url.split(',')[1],'image/jpeg',url);
 }
 function toBase64(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=()=>rej(new Error('e'));r.readAsDataURL(file);});}
-const GEMINI_MODELS=['gemini-3.6-flash','gemini-3-flash','gemini-2.5-flash','gemini-2.0-flash','gemini-flash-latest'];
+const GEMINI_MODELS=['gemini-3.6-flash','gemini-flash-latest','gemini-3.7-flash','gemini-3.5-flash-lite','gemini-3.1-flash-lite'];
 let apiKey='';
 async function loadKey(){try{const r=await STORE.get('geminiKey');if(r&&r.value)apiKey=r.value;}catch(e){}}
 async function setKey(){
@@ -468,41 +469,53 @@ async function setKey(){
 }
 async function readReceipt(b64,mime){
   if(!apiKey){const ok=await setKey();if(!ok)throw new Error('NOKEY');}
-  const prompt=`이 이미지는 구독 서비스 결제 영수증 또는 결제내역 캡처야. 읽어서 아래 형식의 JSON 하나만 출력해. 설명·마크다운·백틱 금지.
-{"name":"서비스명(예: Netflix)","amount":숫자만(콤마·통화기호 제외),"currency":"KRW" 또는 "USD","cycle":"monthly" 또는 "yearly","startDate":"YYYY-MM-DD" 또는 null,"nextPayment":"YYYY-MM-DD" 또는 null,"category":"ott" 또는 "design","ai","cloud","work","news","game","etc" 중 하나,"note":"짧은 한글 참고 또는 빈 문자열"}
-읽을 수 없는 항목은 null로 둬. 금액은 반드시 숫자로.`;
+  const prompt=`이미지는 구독 결제 영수증, 결제 내역, 또는 카드 결제 문자 캡처야. 읽어서 JSON 하나만 출력해.
+{"name":"서비스명","amount":숫자,"currency":"KRW"|"USD","cycle":"monthly"|"yearly","startDate":"YYYY-MM-DD"|null,"nextPayment":"YYYY-MM-DD"|null,"category":"ott"|"design"|"ai"|"cloud"|"work"|"news"|"game"|"etc","note":"짧은 한글 메모"}
+
+규칙:
+- 카드 결제 문자면 가맹점명에서 서비스명을 뽑아. 결제대행사 표기(PAYPAL*, GOOGLE*, PADDLE*, STRIPE*, APPLE.COM/BILL 등)는 떼고 실제 서비스명만. 예: "PAYPAL*CAPCUT" → "CapCut", "GOOGLE*YouTubePremium" → "YouTube Premium"
+- USD/달러 표기면 currency는 "USD", 원/₩이면 "KRW"
+- 날짜가 MM/DD 형식이면 올해로 간주해 YYYY-MM-DD로. 연도를 모르면 null
+- 주기가 명시 안 되면 "monthly"
+- 카테고리 예시: CapCut·Adobe→design, Netflix·YouTube→ott, ChatGPT·Claude→ai, iCloud·Dropbox→cloud, Notion·Slack→work
+- 못 읽은 항목은 null. amount는 반드시 숫자만(콤마·기호 제외)`;
   const body=JSON.stringify({
     contents:[{parts:[{inline_data:{mime_type:mime,data:b64}},{text:prompt}]}],
     generationConfig:{temperature:0,response_mime_type:'application/json'}
   });
   const errors=[];
   for(const model of GEMINI_MODELS){
-    try{
-      const ctl=new AbortController();
-      const timer=setTimeout(()=>ctl.abort(),30000);
-      const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-        {method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':apiKey},body,signal:ctl.signal});
-      clearTimeout(timer);
-      if(!r.ok){
-        let msg='';
-        try{const j=await r.json();msg=j?.error?.message||'';}catch(_){msg=await r.text().catch(()=>'');}
-        if(r.status===400&&/API key not valid|API_KEY_INVALID/i.test(msg))throw new Error('BADKEY');
-        if(r.status===403)throw new Error('BADKEY');
-        if(r.status===429)throw new Error('QUOTA');
-        errors.push(`${model}: ${r.status} ${msg.slice(0,90)}`);
-        continue;
+    for(let attempt=0;attempt<2;attempt++){
+      try{
+        const ctl=new AbortController();
+        const timer=setTimeout(()=>ctl.abort(),60000);
+        const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+          {method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':apiKey},body,signal:ctl.signal});
+        clearTimeout(timer);
+        if(!r.ok){
+          let msg='';
+          try{const j=await r.json();msg=j?.error?.message||'';}catch(_){msg=await r.text().catch(()=>'');}
+          if(r.status===400&&/API key not valid|API_KEY_INVALID/i.test(msg))throw new Error('BADKEY');
+          if(r.status===403)throw new Error('BADKEY');
+          if(r.status===429)throw new Error('QUOTA');
+          if((r.status===503||r.status===500)&&attempt===0){await new Promise(z=>setTimeout(z,1500));continue;}
+          errors.push(`${model}: ${r.status} ${msg.slice(0,70)}`);
+          break;
+        }
+        const data=await r.json();
+        const cand=data?.candidates?.[0];
+        if(!cand){errors.push(`${model}: 응답 비어있음`);break;}
+        let text=(cand.content?.parts||[]).map(p=>p.text||'').join('').replace(/```json|```/g,'').trim();
+        if(!text){errors.push(`${model}: 텍스트 없음 (${cand.finishReason||'?'})`);break;}
+        const a=text.indexOf('{'),b=text.lastIndexOf('}');
+        if(a<0||b<0){errors.push(`${model}: JSON 아님 → ${text.slice(0,50)}`);break;}
+        return JSON.parse(text.slice(a,b+1));
+      }catch(e){
+        if(e.message==='BADKEY'||e.message==='QUOTA')throw e;
+        if(e.name==='AbortError'&&attempt===0)continue;
+        errors.push(`${model}: ${e.name==='AbortError'?'시간초과':e.message}`);
+        break;
       }
-      const data=await r.json();
-      const cand=data?.candidates?.[0];
-      if(!cand){errors.push(`${model}: 응답 비어있음`);continue;}
-      let text=(cand.content?.parts||[]).map(p=>p.text||'').join('').replace(/```json|```/g,'').trim();
-      if(!text){errors.push(`${model}: 텍스트 없음 (${cand.finishReason||'?'})`);continue;}
-      const a=text.indexOf('{'),b=text.lastIndexOf('}');
-      if(a<0||b<0){errors.push(`${model}: JSON 아님 → ${text.slice(0,60)}`);continue;}
-      return JSON.parse(text.slice(a,b+1));
-    }catch(e){
-      if(e.message==='BADKEY'||e.message==='QUOTA')throw e;
-      errors.push(`${model}: ${e.name==='AbortError'?'시간초과':e.message}`);
     }
   }
   const err=new Error('FAIL');err.detail=errors.join(' / ');throw err;

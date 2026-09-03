@@ -2,8 +2,16 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>나의구독쓰</title>
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="나의구독쓰">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#FFFFFF">
+<link rel="manifest" href="manifest.json">
 <style>
   @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css');
   :root{
@@ -67,16 +75,18 @@
   .cardact .ca{width:60px;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit}
   .ca.edit{background:var(--fill);color:var(--ink)}
   .ca.del{background:var(--ink);color:#fff}
-  .cardface{position:relative;z-index:1;background:var(--bg);display:flex;align-items:flex-start;gap:13px;
+  .cardface{position:relative;z-index:1;background:var(--bg);display:flex;align-items:flex-start;gap:12px;overflow:hidden;
     padding:14px 16px;touch-action:pan-y;transition:transform .22s cubic-bezier(.2,.8,.2,1);will-change:transform}
   .card.open .cardface{transform:translateX(-120px)}
-  .ci{width:22px;flex-shrink:0;color:var(--ink);align-self:center}
-  .name{font-size:16px;font-weight:800;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:1;min-width:0;align-self:center}
-  .cright{margin-left:auto;flex-shrink:0;text-align:right;min-width:0}
-  .price{display:flex;align-items:baseline;justify-content:flex-end;gap:3px}
+  .ci{width:22px;flex:0 0 22px;color:var(--ink);align-self:center}
+  .name{font-size:16px;font-weight:800;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    flex:0 1 auto;min-width:56px;align-self:center}
+  .cright{margin-left:auto;flex:1 1 auto;min-width:0;text-align:right;padding-left:8px}
+  .price{display:flex;align-items:baseline;justify-content:flex-end;gap:3px;white-space:nowrap}
   .price .p{font-size:16px;font-weight:800}
   .price .cy{font-size:11px;color:var(--sub)}
-  .sub{font-size:12px;color:var(--sub);margin-top:3px;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:1px 10px}
+  .sub{font-size:12px;color:var(--sub);margin-top:3px;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:2px 9px}
+  .sub span{white-space:nowrap}
   .sub b{color:var(--ink);font-weight:700}
   .swipe-hint{text-align:center;font-size:11px;color:var(--sub);margin:2px 0 14px}
 
@@ -177,7 +187,7 @@
     </button>
     <button class="add" onclick="pickReceipt()">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.2"/></svg>
-      영수증
+      사진
     </button>
     <button class="add" onclick="openForm()">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 5v14M5 12h14"/></svg>
@@ -314,8 +324,9 @@ function render(){
   if(!subs.length){list.innerHTML=`<div class="empty"><svg width="56" height="44" viewBox="0 0 56 44" fill="none" stroke="#E7E7E4" stroke-width="2"><rect x="7" y="5" width="42" height="34" rx="4"/><path d="M7 15h42"/><path d="M18 27l4-4 4 4 4-5" stroke="#111"/></svg><p>영수증을 올리거나 직접 추가하세요</p></div>`;return;}
   const sorted=[...subs].sort((a,b)=>toKRW(b)-toKRW(a));
   list.innerHTML='<div class="swipe-hint">← 밀거나 탭하면 수정·삭제</div>'+sorted.map(s=>{
-    const d=durationText(s.startDate);let sub=[`월 <b class="num">${fmt(monthlyEq(s),s.currency)}</b>`];
-    if(d){sub.push(`<b>${d.text}</b>`);if(d.months>0)sub.push(`누적 <b class="num">${fmt(monthlyEq(s)*d.months,s.currency)}</b>`);}
+    const d=durationText(s.startDate);let sub=[];
+    if(s.cycle==='yearly')sub.push(`월 <b class="num">${fmt(monthlyEq(s),s.currency)}</b>`);
+    if(d&&d.months>0){sub.push(`<b>${d.text}</b>`);sub.push(`누적 <b class="num">${fmt(monthlyEq(s)*d.months,s.currency)}</b>`);}
     if(s.nextPayment)sub.push(`↻ ${s.nextPayment}`);
     if(s.memo)sub.push(esc(s.memo));
     return `<div class="card" data-id="${s.id}">
